@@ -240,7 +240,7 @@
             // Carregar dados ao iniciar
             useEffect(() => {
                 // Verifique se a URL do Apps Script não é a URL padrão antes de carregar os dados
-                if (APPS_SCRIPT_URL !== 'https://script.google.com/macros/s/AKfycbwpYH87zsNpt4hzzaLeAgbJBKsPbQqkNgSrGOkQvvOCnbLvJnjlV0_fTMLJVy0vz1LD/exec') {
+                if (APPS_SCRIPT_URL !== 'https://script.google.com/macros/s/AKfycbz7P35Do8xoMSOq61aL1iiVPIXcapDSho5tGSa2zi-pcFFzK7oiFQ-iSkNDBIBt51BU/exec') {
                     loadBookingsFromAppsScript();
                 }
             }, []);
@@ -320,7 +320,7 @@
                 if (!isSlotAvailable(selectedSlot, teacherId)) {
                     showMessage("Este horário não está mais disponível. Por favor, selecione outro.", "error");
                     // Recarrega os dados para pegar o estado mais recente
-                    if (APPS_SCRIPT_URL !== 'https://script.google.com/macros/s/AKfycbwpYH87zsNpt4hzzaLeAgbJBKsPbQqkNgSrGOkQvvOCnbLvJnjlV0_fTMLJVy0vz1LD/exec') {
+                    if (APPS_SCRIPT_URL !== 'https://script.google.com/macros/s/AKfycbz7P35Do8xoMSOq61aL1iiVPIXcapDSho5tGSa2zi-pcFFzK7oiFQ-iSkNDBIBt51BU/exec') {
                         loadBookingsFromAppsScript();
                     }
                     return;
@@ -389,7 +389,7 @@
                                             <p className="text-xl text-gray-600 mb-2">Reuniões Pedagógicas com Professores</p>
                                             <p className="text-gray-500 mb-2">Horários disponíveis: 18:30 às 19:50 (intervalos de 10 minutos)</p>
                                             <p className="text-sm text-green-600">
-                                                {APPS_SCRIPT_URL !== 'https://script.google.com/macros/s/AKfycbwpYH87zsNpt4hzzaLeAgbJBKsPbQqkNgSrGOkQvvOCnbLvJnjlV0_fTMLJVy0vz1LD/exec' ? (
+                                                {APPS_SCRIPT_URL !== 'https://script.google.com/macros/s/AKfycbz7P35Do8xoMSOq61aL1iiVPIXcapDSho5tGSa2zi-pcFFzK7oiFQ-iSkNDBIBt51BU/exec' ? (
                                                     <span>🔗 Conectado ao Google Sheets</span>
                                                 ) : (
                                                     <span className="text-red-500 font-bold">⚠️ URL do Google Apps Script não configurada!</span>
