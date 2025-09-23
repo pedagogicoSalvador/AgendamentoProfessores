@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Agendamento - Professores</title>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 font-sans">
+    <div id="root"></div>
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        // CONFIGURAÇÃO - SUBSTITUA PELA URL DO SEU GOOGLE APPS SCRIPT
+        const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwpYH87zsNpt4hzzaLeAgbJBKsPbQqkNgSrGOkQvvOCnbLvJnjlV0_fTMLJVy0vz1LD/exec';
+        const ADMIN_PASSWORD = 'admin123';
+
+        function TeacherSchedulingSystem() {
+            // Estrutura de dados para as matérias e professores
+            const subjects = {
+                "Língua Portuguesa e Redação": {
+                    icon: "📚",
+                    color: "blue",
+                    teachers: [
+                        { id: 1, name: "Profª. Juliana Tricot", turmas: ["Língua Portuguesa: 8º e 9º anos", "Redação: 9º anos"] },
+                        { id: 2, name: "Profª. Juliana Velho", turmas: ["Língua Portuguesa e Redação: Ensino Médio"] },
+                        { id: 3, name: "Profª. Daniella", turmas: ["Língua Portuguesa: 6º e 7º anos"] },
+                        { id: 4, name: "Profª. Márcia", turmas: ["Língua Portuguesa: 5º anos", "Inglês: 5º anos a 8º anos - Manhã"] }
+                    ]
+                },
+                "Matemática": {
+                    icon: "🧮",
+                    color: "green",
+                    teachers: [
+                        { id: 5, name: "Profª. Aline", turmas: ["7º anos"] },
+                        { id: 6, name: "Profª Eliana", turmas: ["5º ano - Manhã"] },
+                        { id: 7, name: "Profª Kátya", turmas: ["2ª e 3ª séries - EM"] },
+                        { id: 8, name: "Prof. Mateus", turmas: ["5º anos - Tarde e 6º anos"] },
+                        { id: 9, name: "Profª Michele", turmas: ["8º, 9º e 1ª séries - EM"] }
+                    ]
+                },
+                "Ciências e Química": {
+                    icon: "🔬",
+                    color: "purple",
+                    teachers: [
+                        { id: 10, name: "Profª. Karina", turmas: ["Ciências: 6º, Manhã e Tarde, 7º, 8º e 9º - Tarde"] },
+                        { id: 11, name: "Profª. Raquel", turmas: ["Química: 2ª e 3ª séries - EM"] },
+                        { id: 12, name: "Profª. Roberta", turmas: ["Ciências: 7º, 8º e 9º - Manhã", "Química: 1ª série: EM"] },
+                        { id: 13, name: "Profª. Tarine", turmas: ["Ciências: 5º anos"] }
+                    ]
+                },
+                "Espanhol": {
+                    icon: "🇪🇸",
+                    color: "red",
+                    teachers: [
+                        { id: 14, name: "Profª. Michelle", turmas: ["6º ao 9º anos"] }
+                    ]
+                },
+                "Inglês": {
+                    icon: "🔤",
+                    color: "indigo",
+                    teachers: [
+                        { id: 15, name: "Profª Bianca", turmas: ["EF2 - Tarde"] },
+                        { id: 16, name: "Profª Giane", turmas: ["EM"] },
+                        { id: 17, name: "Prof. Leonardo", turmas: ["9º anos", "EM"] },
+                        { id: 18, name: "Prof. Everton", turmas: ["EM"] },
+                        { id: 19, name: "Prof. Patrick", turmas: ["EM"] },
+                        { id: 20, name: "Profª Regina", turmas: ["EM"] },
+                        { id: 21, name: "Profª Gisele", turmas: ["EM"] }
+                    ]
+                },
+                "História/Filosofia/Sociologia": {
+                    icon: "🏛️",
+                    color: "yellow",
+                    teachers: [
+                        { id: 22, name: "Prof. Cristiane", turmas: ["História e Geografia: 5º anos", "História: 6º - Manhã", "Ensino Religiosos"] },
+                        { id: 23, name: "Prof. Bruno Segatto", turmas: ["História - EM", "Filosofia - EM", "Sociologia - EM"] },
+                        { id: 24, name: "Prof. Guilherme", turmas: ["História: 6º, 7º e 8º - Tarde", "Filosofia: 8º - Tarde"] },
+                        { id: 25, name: "Profª. Isadora", turmas: ["História - 7º, 8º - Manhã, 9º anos", "Filosofia: 8º - Manhã e 9º"] }
+                    ]
+                },
+                "Geografia": {
+                    icon: "🌍",
+                    color: "teal",
+                    teachers: [
+                        { id: 26, name: "Prof. Dillian", turmas: ["6º ao 9º - EF", "EM"] }
+                    ]
+                },
+                "Educação Física": {
+                    icon: "⚽",
+                    color: "orange",
+                    teachers: [
+                        { id: 27, name: "Prof. Ana Carolina", turmas: ["5º ao 9º anos", "EM"] },
+                        { id: 28, name: "Prof. Fabiani", turmas: ["7º ao 9º anos- Manhã"] }
+                    ]
+                }
+            };
+
+            // Gera os horários de agendamento em intervalos de 10 minutos
+            const generateTimeSlots = () => {
+                const slots = [];
+                let startTime = new Date();
+                startTime.setHours(18, 30, 0, 0);
+                const endTime = new Date();
+                endTime.setHours(19, 50, 0, 0);
+                
+                while (startTime <= endTime) {
+                    const timeString = startTime.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', hour12: false });
+                    slots.push(timeString);
+                    startTime.setMinutes(startTime.getMinutes() + 10);
+                }
+                return slots;
+            };
+
+            const timeSlots = generateTimeSlots();
+
+            // Estado da aplicação
+            const [currentScreen, setCurrentScreen] = useState("home");
+            const [selectedSubject, setSelectedSubject] = useState("");
+            const [selectedTeacher, setSelectedTeacher] = useState(null);
+            const [teacherBookings, setTeacherBookings] = useState(new Map());
+            const [message, setMessage] = useState("");
+            const [messageType, setMessageType] = useState("");
+            const [isLoading, setIsLoading] = useState(false);
+            const [isAdminMode, setIsAdminMode] = useState(false);
+            const [adminPassword, setAdminPassword] = useState("");
+            const [parentName, setParentName] = useState("");
+            const [studentName, setStudentName] = useState("");
+            const [email, setEmail] = useState("");
+            const [selectedSlot, setSelectedSlot] = useState("");
+            const [adminData, setAdminData] = useState([]);
+
+            // Funções para exibição de mensagens
+            const showMessage = (text, type) => {
+                setMessage(text);
+                setMessageType(type);
+                setTimeout(() => {
+                    setMessage("");
+                    setMessageType("");
+                }, 4000);
+            };
+
+            // Funções de comunicação com o Google Apps Script
+            const loadBookingsFromAppsScript = async () => {
+                try {
+                    setIsLoading(true);
+                    showMessage('Carregando agendamentos...', 'success');
+                    
+                    const response = await fetch(APPS_SCRIPT_URL);
+                    const result = await response.json();
+                    
+                    if (!result.success) {
+                        throw new Error(result.error || 'Erro ao carregar dados');
+                    }
+                    
+                    const rows = result.data || [];
+                    const bookingRows = rows.slice(1); // Pular cabeçalho
+                    
+                    const newBookings = new Map();
+                    const allBookings = [];
+                    
+                    bookingRows.forEach(row => {
+                        if (row.length >= 6) {
+                            const [professor, disciplina, responsavel, estudante, emailResp, horario, data] = row;
+                            
+                            // Encontrar ID do professor
+                            let teacherId = null;
+                            Object.values(subjects).forEach(subject => {
+                                const teacher = subject.teachers.find(t => t.name === professor);
+                                if (teacher) {
+                                    teacherId = teacher.id;
+                                }
+                            });
+                            
+                            if (teacherId && horario) {
+                                if (!newBookings.has(teacherId)) {
+                                    newBookings.set(teacherId, new Map());
+                                }
+                                
+                                const bookingData = {
+                                    parentName: responsavel,
+                                    studentName: estudante,
+                                    email: emailResp,
+                                    time: horario,
+                                    bookingDate: data || new Date().toLocaleDateString('pt-BR'),
+                                    teacher: professor,
+                                    subject: disciplina
+                                };
+                                
+                                newBookings.get(teacherId).set(horario, bookingData);
+                                allBookings.push(bookingData);
+                            }
+                        }
+                    });
+                    
+                    setTeacherBookings(newBookings);
+                    setAdminData(allBookings);
+                    showMessage('Agendamentos carregados com sucesso!', 'success');
+                    
+                } catch (error) {
+                    console.error('Erro ao carregar dados:', error);
+                    showMessage('Erro ao conectar com a planilha. Usando dados locais.', 'error');
+                } finally {
+                    setIsLoading(false);
+                }
+            };
+
+            const saveBookingToAppsScript = async (bookingData) => {
+                try {
+                    setIsLoading(true);
+                    
+                    const response = await fetch(APPS_SCRIPT_URL, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(bookingData)
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (!result.success) {
+                        throw new Error(result.error || 'Erro ao salvar');
+                    }
+                    
+                    return true;
+                } catch (error) {
+                    console.error('Erro ao salvar:', error);
+                    showMessage('Agendamento salvo localmente. Erro ao sincronizar com a planilha.', 'error');
+                    return false;
+                } finally {
+                    setIsLoading(false);
+                }
+            };
+
+            // Carregar dados ao iniciar
+            useEffect(() => {
+                if (APPS_SCRIPT_URL !== 'https://script.google.com/macros/s/SEU_SCRIPT_ID_AQUI/exec') {
+                    loadBookingsFromAppsScript();
+                } else {
+                    showMessage('A URL do Google Apps Script não foi configurada. Funcionalidade de salvamento desativada.', 'error');
+                }
+            }, []);
+
+            // Funções de navegação
+            const goBack = () => {
+                if (currentScreen === "booking") {
+                    setCurrentScreen("teachers");
+                } else if (currentScreen === "teachers") {
+                    setCurrentScreen("subjects");
+                } else if (currentScreen === "subjects" || currentScreen === "admin" || currentScreen === "adminPanel") {
+                    setCurrentScreen("home");
+                }
+            };
+            
+            const goToSubjects = () => setCurrentScreen("subjects");
+            const goToTeachers = (subject) => {
+                setSelectedSubject(subject);
+                setCurrentScreen("teachers");
+            };
+            const goToBooking = (teacher) => {
+                setSelectedTeacher(teacher);
+                setCurrentScreen("booking");
+                setParentName("");
+                setStudentName("");
+                setEmail("");
+                setSelectedSlot("");
+            };
+            const goToAdmin = () => setCurrentScreen("admin");
+            const goToAdminPanel = () => {
+                if (adminPassword === ADMIN_PASSWORD) {
+                    setIsAdminMode(true);
+                    setCurrentScreen("adminPanel");
+                    setAdminPassword("");
+                    showMessage("Acesso administrativo concedido!", "success");
+                } else {
+                    showMessage("Senha incorreta. Acesso negado.", "error");
+                    setAdminPassword("");
+                }
+            };
+
+            // Funções de lógica de agendamento
+            const getTeacherBookings = (teacherId) => {
+                return teacherBookings.get(teacherId) || new Map();
+            };
+            const getBookedSlots = (teacherId) => {
+                const bookings = getTeacherBookings(teacherId);
+                return new Set(Array.from(bookings.keys()));
+            };
+            const isSlotAvailable = (slot, teacherId) => {
+                const bookedSlots = getBookedSlots(teacherId);
+                return !bookedSlots.has(slot);
+            };
+
+            // Handler para o agendamento
+            const handleBooking = async () => {
+                const teacherId = selectedTeacher?.id;
+                if (!teacherId || !parentName.trim() || !studentName.trim() || !email.trim() || !selectedSlot) {
+                    showMessage("Por favor, preencha todos os campos.", "error");
+                    return;
+                }
+
+                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                if (!emailRegex.test(email)) {
+                    showMessage("Por favor, insira um email válido.", "error");
+                    return;
+                }
+
+                const currentBookings = getTeacherBookings(teacherId);
+                const existingBooking = Array.from(currentBookings.values()).find(booking => booking.email.toLowerCase() === email.toLowerCase());
+                
+                if (existingBooking) {
+                    showMessage(`Este email já tem um agendamento com ${selectedTeacher.name}.`, "error");
+                    return;
+                }
+
+                if (!isSlotAvailable(selectedSlot, teacherId)) {
+                    showMessage("Este horário não está mais disponível. Por favor, selecione outro.", "error");
+                    // Recarrega os dados para pegar o estado mais recente
+                    if (APPS_SCRIPT_URL !== 'https://script.google.com/macros/s/SEU_SCRIPT_ID_AQUI/exec') {
+                        loadBookingsFromAppsScript();
+                    }
+                    return;
+                }
+
+                const bookingData = {
+                    parentName: parentName.trim(),
+                    studentName: studentName.trim(),
+                    email: email.trim().toLowerCase(),
+                    time: selectedSlot,
+                    bookingDate: new Date().toLocaleDateString('pt-BR'),
+                    teacher: selectedTeacher.name,
+                    subject: selectedSubject
+                };
+
+                // Salvar localmente
+                const updatedBookings = new Map([...currentBookings, [selectedSlot, bookingData]]);
+                setTeacherBookings(prev => new Map([...prev, [teacherId, updatedBookings]]));
+                
+                // Tentar salvar no Google Apps Script
+                const savedToSheets = await saveBookingToAppsScript(bookingData);
+                
+                if (savedToSheets) {
+                    showMessage(`Agendamento confirmado para ${selectedTeacher.name} às ${selectedSlot}!`, "success");
+                } else {
+                    showMessage(`Agendamento salvo localmente! Por favor, tente sincronizar manualmente.`, "success");
+                }
+
+                setTimeout(() => {
+                    setCurrentScreen("home");
+                }, 2000);
+            };
+
+            // Componente de Mensagem
+            const MessageComponent = ({ message, type }) => (
+                message && (
+                    <div className={`mt-6 p-4 rounded-lg flex items-center justify-center text-sm ${type === 'success' ? 'bg-green-50 text-green-800 border border-green-200' : 'bg-red-50 text-red-800 border border-red-200'}`}>
+                        {message}
+                    </div>
+                )
+            );
+
+            // Renderização das telas
+            const renderScreen = () => {
+                if (isLoading) {
+                    return (
+                        <div className="min-h-screen flex items-center justify-center">
+                            <div className="bg-white rounded-2xl shadow-xl p-8 text-center">
+                                <div className="text-4xl mb-4 animate-spin">⏳</div>
+                                <h2 className="text-xl font-semibold text-gray-800 mb-2">Sincronizando...</h2>
+                                <p className="text-gray-600">Conectando com Google Sheets</p>
+                            </div>
+                        </div>
+                    );
+                }
+
+                switch (currentScreen) {
+                    case "home":
+                        return (
+                            <div className="p-6">
+                                <div className="max-w-6xl mx-auto">
+                                    <div className="bg-white rounded-2xl shadow-xl p-8 text-center">
+                                        <div className="mb-8">
+                                            <div className="text-6xl mb-4">🎓</div>
+                                            <h1 className="text-4xl font-bold text-gray-800 mb-4">Sistema de Agendamento</h1>
+                                            <p className="text-xl text-gray-600 mb-2">Reuniões Pedagógicas com Professores</p>
+                                            <p className="text-gray-500 mb-2">Horários disponíveis: 18:30 às 19:50 (intervalos de 10 minutos)</p>
+                                            <p className="text-sm text-green-600">🔗 Conectado ao Google Sheets</p>
+                                        </div>
+                                        <div className="flex flex-col md:flex-row gap-4 justify-center mb-8">
+                                            <button onClick={goToSubjects} className="px-8 py-4 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-lg font-medium">Começar Agendamento</button>
+                                            <button onClick={goToAdmin} className="px-6 py-4 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors text-lg font-medium">⚙️ Área Administrativa</button>
+                                            <button onClick={loadBookingsFromAppsScript} className="px-6 py-4 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-lg font-medium">🔄 Atualizar</button>
+                                        </div>
+                                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                                            {Object.entries(subjects).map(([subject, data]) => (
+                                                <div key={subject} className="bg-gray-50 rounded-lg p-4 shadow-sm">
+                                                    <div className="text-2xl mb-2 text-center">{data.icon}</div>
+                                                    <h3 className="text-sm font-semibold text-gray-800 mb-1 text-center">{subject}</h3>
+                                                    <p className="text-gray-600 text-xs text-center">{`${data.teachers.length} prof(s)`}</p>
+                                                </div>
+                                            ))}
+                                        </div>
+                                        <MessageComponent message={message} type={messageType} />
+                                    </div>
+                                </div>
+                            </div>
+                        );
+
+                    case "subjects":
+                        return (
+                            <div className="p-6">
+                                <div className="max-w-4xl mx-auto">
+                                    <div className="bg-white rounded-2xl shadow-xl p-8">
+                                        <button onClick={goBack} className="mb-4 text-gray-600 hover:text-gray-800 transition-colors">
+                                            ← Voltar
+                                        </button>
+                                        <h2 className="text-2xl font-bold text-gray-800 mb-6 text-center">1. Selecione a Matéria</h2>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                                            {Object.entries(subjects).map(([subject, data]) => (
+                                                <button key={subject} onClick={() => goToTeachers(subject)} className={`bg-white rounded-xl shadow-lg hover:shadow-xl transition-shadow p-6 text-center border-4 border-transparent hover:border-${data.color}-500 focus:outline-none focus:ring-2 focus:ring-${data.color}-500`}>
+                                                    <div className="text-5xl mb-2">{data.icon}</div>
+                                                    <div className="text-lg font-semibold text-gray-800">{subject}</div>
+                                                    <div className="text-sm text-gray-500 mt-1">{data.teachers.length} professor(es)</div>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        );
+                        
+                    case "teachers":
+                        const teachersInSubject = subjects[selectedSubject]?.teachers || [];
+                        return (
+                            <div className="p-6">
+                                <div className="max-w-4xl mx-auto">
+                                    <div className="bg-white rounded-2xl shadow-xl p-8">
+                                        <button onClick={goBack} className="mb-4 text-gray-600 hover:text-gray-800 transition-colors">
+                                            ← Voltar
+                                        </button>
+                                        <h2 className="text-2xl font-bold text-gray-800 mb-2 text-center">2. Selecione o Professor</h2>
+                                        <p className="text-gray-600 mb-6 text-center">Matéria: <span className={`font-semibold text-${subjects[selectedSubject]?.color}-600`}>{selectedSubject}</span></p>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                            {teachersInSubject.map(teacher => {
+                                                const bookedSlotsCount = getBookedSlots(teacher.id).size;
+                                                const availableSlotsCount = timeSlots.length - bookedSlotsCount;
+                                                return (
+                                                    <div key={teacher.id} className="bg-gray-50 rounded-xl shadow-md p-6">
+                                                        <h3 className="text-xl font-semibold text-gray-800 mb-2">{teacher.name}</h3>
+                                                        <p className="text-sm text-gray-500 mb-4">Turmas: {teacher.turmas.join(", ")}</p>
+                                                        <div className="flex justify-between items-center mb-4">
+                                                            <span className="text-lg font-medium text-green-600">{availableSlotsCount} horários disponíveis</span>
+                                                            <span className="text-sm text-gray-500">de {timeSlots.length}</span>
+                                                        </div>
+                                                        <button onClick={() => goToBooking(teacher)} className="w-full py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium">Agendar</button>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        );
+
+                    case "booking":
+                        const bookedSlots = getBookedSlots(selectedTeacher.id);
+                        return (
+                            <div className="p-6">
+                                <div className="max-w-2xl mx-auto">
+                                    <div className="bg-white rounded-2xl shadow-xl p-8">
+                                        <button onClick={goBack} className="mb-4 text-gray-600 hover:text-gray-800 transition-colors">
+                                            ← Voltar
+                                        </button>
+                                        <h2 className="text-2xl font-bold text-gray-800 mb-2 text-center">3. Agende seu Horário</h2>
+                                        <div className="bg-gray-50 p-4 rounded-lg text-center mb-6">
+                                            <p className="text-lg font-semibold text-gray-800">{selectedTeacher.name}</p>
+                                            <p className="text-sm text-gray-600">Matéria: {selectedSubject}</p>
+                                        </div>
+
+                                        <div className="mb-6">
+                                            <label className="block text-gray-700 font-medium mb-2">Selecione o Horário</label>
+                                            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
+                                                {timeSlots.map(slot => (
+                                                    <button 
+                                                        key={slot} 
+                                                        onClick={() => setSelectedSlot(slot)} 
+                                                        disabled={!isSlotAvailable(slot, selectedTeacher.id)}
+                                                        className={`py-2 rounded-lg text-sm font-medium transition-all
+                                                            ${selectedSlot === slot ? 'bg-indigo-600 text-white shadow-lg' :
+                                                            isSlotAvailable(slot, selectedTeacher.id) ? 'bg-indigo-100 text-indigo-800 hover:bg-indigo-200' :
+                                                            'bg-gray-200 text-gray-500 cursor-not-allowed line-through'}
+                                                        `}
+                                                    >
+                                                        {slot}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+
+                                        <form onSubmit={(e) => { e.preventDefault(); handleBooking(); }}>
+                                            <div className="mb-4">
+                                                <label htmlFor="parentName" className="block text-gray-700 font-medium mb-2">Nome do Responsável</label>
+                                                <input id="parentName" type="text" value={parentName} onChange={(e) => setParentName(e.target.value)} className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Seu nome completo" required />
+                                            </div>
+                                            <div className="mb-4">
+                                                <label htmlFor="studentName" className="block text-gray-700 font-medium mb-2">Nome do Estudante</label>
+                                                <input id="studentName" type="text" value={studentName} onChange={(e) => setStudentName(e.target.value)} className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Nome do estudante" required />
+                                            </div>
+                                            <div className="mb-6">
+                                                <label htmlFor="email" className="block text-gray-700 font-medium mb-2">Email para Contato</label>
+                                                <input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="seu-email@exemplo.com" required />
+                                            </div>
+                                            <button type="submit" className="w-full py-4 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-bold text-lg">
+                                                Confirmar Agendamento
+                                            </button>
+                                        </form>
+                                        <MessageComponent message={message} type={messageType} />
+                                    </div>
+                                </div>
+                            </div>
+                        );
+                        
+                    case "admin":
+                        return (
+                            <div className="min-h-screen flex items-center justify-center">
+                                <div className="bg-white rounded-2xl shadow-xl p-8 text-center max-w-sm w-full">
+                                    <button onClick={goBack} className="absolute top-4 left-4 text-gray-600 hover:text-gray-800 transition-colors">
+                                        ← Voltar
+                                    </button>
+                                    <h2 className="text-2xl font-bold text-gray-800 mb-6">Acesso Administrativo</h2>
+                                    <form onSubmit={(e) => { e.preventDefault(); goToAdminPanel(); }}>
+                                        <div className="mb-4">
+                                            <input 
+                                                type="password" 
+                                                value={adminPassword} 
+                                                onChange={(e) => setAdminPassword(e.target.value)} 
+                                                className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500"
+                                                placeholder="Senha de administrador"
+                                            />
+                                        </div>
+                                        <button type="submit" className="w-full py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors font-medium">
+                                            Entrar
+                                        </button>
+                                    </form>
+                                    <MessageComponent message={message} type={messageType} />
+                                </div>
+                            </div>
+                        );
+
+                    case "adminPanel":
+                        return (
+                            <div className="p-6">
+                                <div className="max-w-6xl mx-auto">
+                                    <div className="bg-white rounded-2xl shadow-xl p-8">
+                                        <button onClick={goBack} className="mb-4 text-gray-600 hover:text-gray-800 transition-colors">
+                                            ← Voltar
+                                        </button>
+                                        <h2 className="text-2xl font-bold text-gray-800 mb-6 text-center">Painel Administrativo</h2>
+                                        {adminData.length > 0 ? (
+                                            <div className="overflow-x-auto rounded-lg">
+                                                <table className="min-w-full bg-white border-collapse">
+                                                    <thead>
+                                                        <tr className="bg-gray-200 text-gray-700 text-left text-xs uppercase font-medium">
+                                                            <th className="py-3 px-4 rounded-tl-lg">Professor</th>
+                                                            <th className="py-3 px-4">Disciplina</th>
+                                                            <th className="py-3 px-4">Horário</th>
+                                                            <th className="py-3 px-4">Responsável</th>
+                                                            <th className="py-3 px-4">Estudante</th>
+                                                            <th className="py-3 px-4 rounded-tr-lg">Email</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody className="divide-y divide-gray-200">
+                                                        {adminData.map((booking, index) => (
+                                                            <tr key={index} className="hover:bg-gray-50 transition-colors">
+                                                                <td className="py-3 px-4 whitespace-nowrap text-sm text-gray-800">{booking.teacher}</td>
+                                                                <td className="py-3 px-4 whitespace-nowrap text-sm text-gray-600">{booking.subject}</td>
+                                                                <td className="py-3 px-4 whitespace-nowrap text-sm font-semibold text-gray-800">{booking.time}</td>
+                                                                <td className="py-3 px-4 whitespace-nowrap text-sm text-gray-600">{booking.parentName}</td>
+                                                                <td className="py-3 px-4 whitespace-nowrap text-sm text-gray-600">{booking.studentName}</td>
+                                                                <td className="py-3 px-4 whitespace-nowrap text-sm text-blue-600 truncate">{booking.email}</td>
+                                                            </tr>
+                                                        ))}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        ) : (
+                                            <div className="text-center text-gray-500 py-10">
+                                                <p className="text-lg">Nenhum agendamento encontrado.</p>
+                                                <p className="text-sm">Os agendamentos aparecerão aqui após serem feitos.</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        );
+
+                    default:
+                        return <div className="p-6 text-center text-gray-500">Tela não encontrada.</div>;
+                }
+            };
+
+            return (
+                <div className="min-h-screen flex items-center justify-center p-4">
+                    {renderScreen()}
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<TeacherSchedulingSystem />);
+    </script>
+</body>
+</html>
