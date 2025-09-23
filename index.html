@@ -15,6 +15,7 @@
         const { useState, useEffect } = React;
 
         // CONFIGURAÇÃO - SUBSTITUA PELA URL DO SEU GOOGLE APPS SCRIPT
+        // Você precisa publicar o seu script do Google como uma "Web App" para obter essa URL.
         const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwpYH87zsNpt4hzzaLeAgbJBKsPbQqkNgSrGOkQvvOCnbLvJnjlV0_fTMLJVy0vz1LD/exec';
         const ADMIN_PASSWORD = 'admin123';
 
@@ -238,10 +239,9 @@
 
             // Carregar dados ao iniciar
             useEffect(() => {
-                if (APPS_SCRIPT_URL !== 'https://script.google.com/macros/s/SEU_SCRIPT_ID_AQUI/exec') {
+                // Verifique se a URL do Apps Script não é a URL padrão antes de carregar os dados
+                if (APPS_SCRIPT_URL !== 'https://script.google.com/macros/s/AKfycbwpYH87zsNpt4hzzaLeAgbJBKsPbQqkNgSrGOkQvvOCnbLvJnjlV0_fTMLJVy0vz1LD/exec') {
                     loadBookingsFromAppsScript();
-                } else {
-                    showMessage('A URL do Google Apps Script não foi configurada. Funcionalidade de salvamento desativada.', 'error');
                 }
             }, []);
 
@@ -320,7 +320,7 @@
                 if (!isSlotAvailable(selectedSlot, teacherId)) {
                     showMessage("Este horário não está mais disponível. Por favor, selecione outro.", "error");
                     // Recarrega os dados para pegar o estado mais recente
-                    if (APPS_SCRIPT_URL !== 'https://script.google.com/macros/s/SEU_SCRIPT_ID_AQUI/exec') {
+                    if (APPS_SCRIPT_URL !== 'https://script.google.com/macros/s/AKfycbwpYH87zsNpt4hzzaLeAgbJBKsPbQqkNgSrGOkQvvOCnbLvJnjlV0_fTMLJVy0vz1LD/exec') {
                         loadBookingsFromAppsScript();
                     }
                     return;
@@ -388,7 +388,13 @@
                                             <h1 className="text-4xl font-bold text-gray-800 mb-4">Sistema de Agendamento</h1>
                                             <p className="text-xl text-gray-600 mb-2">Reuniões Pedagógicas com Professores</p>
                                             <p className="text-gray-500 mb-2">Horários disponíveis: 18:30 às 19:50 (intervalos de 10 minutos)</p>
-                                            <p className="text-sm text-green-600">🔗 Conectado ao Google Sheets</p>
+                                            <p className="text-sm text-green-600">
+                                                {APPS_SCRIPT_URL !== 'https://script.google.com/macros/s/AKfycbwpYH87zsNpt4hzzaLeAgbJBKsPbQqkNgSrGOkQvvOCnbLvJnjlV0_fTMLJVy0vz1LD/exec' ? (
+                                                    <span>🔗 Conectado ao Google Sheets</span>
+                                                ) : (
+                                                    <span className="text-red-500 font-bold">⚠️ URL do Google Apps Script não configurada!</span>
+                                                )}
+                                            </p>
                                         </div>
                                         <div className="flex flex-col md:flex-row gap-4 justify-center mb-8">
                                             <button onClick={goToSubjects} className="px-8 py-4 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-lg font-medium">Começar Agendamento</button>
