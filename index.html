@@ -14,11 +14,9 @@
     <script type="text/babel">
         const { useState, useEffect } = React;
 
-        // CONFIGURAÇÃO - SUBSTITUA PELA URL DO SEU GOOGLE APPS SCRIPT
-        // Você precisa publicar o seu script do Google como uma "Web App" para obter essa URL.
+        // ✅ SUA URL REAL DO GOOGLE APPS SCRIPT
         const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwi-XZ-QuLGnRX8yB4jfKUgxDGRHVgZnX_hHEV0kTdxd_4J1p5rOtTokGQEXbu6EF8A/exec';
         const ADMIN_PASSWORD = 'admin123';
-
         function TeacherSchedulingSystem() {
             // Estrutura de dados para as matérias e professores
             const subjects = {
