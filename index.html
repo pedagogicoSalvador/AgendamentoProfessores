@@ -237,17 +237,21 @@ const saveBookingToAppsScript = async (bookingData) => {
             const goToTeachers = (subject) => { setSelectedSubject(subject); setCurrentScreen("teachers"); };
             const goToBooking = (teacher) => { setSelectedTeacher(teacher); setCurrentScreen("booking"); setParentName(""); setStudentName(""); setEmail(""); setSelectedSlot(""); };
             const goToAdmin = () => setCurrentScreen("admin");
-            const goToAdminPanel = () => {
-                if (adminPassword === ADMIN_PASSWORD) {
-                    setIsAdminMode(true);
-                    setCurrentScreen("adminPanel");
-                    setAdminPassword("");
-                    showMessage("Acesso administrativo concedido!", "success");
-                } else {
-                    showMessage("Senha incorreta. Acesso negado.", "error");
-                    setAdminPassword("");
-                }
-            };
+            const goToAdminPanel = async () => {
+               if (adminPassword === ADMIN_PASSWORD) {
+                  setIsAdminMode(true);
+                  setCurrentScreen("adminPanel");
+                  setAdminPassword("");
+                  showMessage("Acesso administrativo concedido!", "success");
+        
+        // 🔄 carregar agendamentos atualizados
+                  await loadBookingsFromAppsScript();
+                
+            } else {
+               showMessage("Senha incorreta. Acesso negado.", "error");
+               setAdminPassword("");
+            }
+        };
 
             // Controle de horários
             const getTeacherBookings = (teacherId) => teacherBookings.get(teacherId) || new Map();
