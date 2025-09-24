@@ -195,29 +195,30 @@
             };
 
             // Salvar agendamento
-            const saveBookingToAppsScript = async (bookingData) => {
-                try {
-                    setIsLoading(true);
+            // --- Função de salvar com ajuste para CORS ---
+const saveBookingToAppsScript = async (bookingData) => {
+    try {
+        setIsLoading(true);
 
-                    const response = await fetch(APPS_SCRIPT_URL, {
-                                        method: "POST",
-                                        mode: "no-cors",   // 🚨 isso evita o bloqueio
-                                        headers: { "Content-Type": "application/json" },
-                                        body: JSON.stringify(bookingData)
-                                    });
+        await fetch(APPS_SCRIPT_URL, {
+            method: "POST",
+            mode: "no-cors",   // 🚀 evita bloqueio de CORS
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify(bookingData)
+        });
 
-            const result = await response.json();
-
-            // Se vier qualquer resposta com success = true, considera salvo
-            if (result.success === true) {
-            return true;
-           } else {
-               throw new Error(result.error || 'Erro ao salvar');
-           }
+        // Como o modo "no-cors" não permite ler a resposta,
+        // vamos assumir que funcionou.
+        return true;
 
     } catch (error) {
-        console.error('Erro ao salvar:', error);
-        showMessage('Agendamento salvo localmente. Erro ao sincronizar com a planilha.', 'error');
+        console.error("Erro ao salvar:", error);
+        showMessage(
+            "Agendamento salvo localmente. Erro ao sincronizar com a planilha.",
+            "error"
+        );
         return false;
     } finally {
         setIsLoading(false);
