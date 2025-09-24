@@ -200,12 +200,11 @@
                     setIsLoading(true);
 
                     const response = await fetch(APPS_SCRIPT_URL, {
-                        method: 'POST',
-                        headers: { 
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify(bookingData)
-            });
+                                        method: "POST",
+                                        mode: "no-cors",   // 🚨 isso evita o bloqueio
+                                        headers: { "Content-Type": "application/json" },
+                                        body: JSON.stringify(bookingData)
+                                    });
 
             const result = await response.json();
 
