@@ -198,22 +198,32 @@
             const saveBookingToAppsScript = async (bookingData) => {
                 try {
                     setIsLoading(true);
+
                     const response = await fetch(APPS_SCRIPT_URL, {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
+                        headers: { 
+                            'Content-Type': 'application/json',
+                        },
                         body: JSON.stringify(bookingData)
-                    });
-                    const result = await response.json();
-                    if (!result.success) throw new Error(result.error || 'Erro ao salvar');
-                    return true;
-                } catch (error) {
-                    console.error('Erro ao salvar:', error);
-                    showMessage('Erro ao sincronizar com a planilha.', 'error');
-                    return false;
-                } finally {
-                    setIsLoading(false);
-                }
-            };
+            });
+
+            const result = await response.json();
+
+            // Se vier qualquer resposta com success = true, considera salvo
+            if (result.success === true) {
+            return true;
+           } else {
+               throw new Error(result.error || 'Erro ao salvar');
+           }
+
+    } catch (error) {
+        console.error('Erro ao salvar:', error);
+        showMessage('Agendamento salvo localmente. Erro ao sincronizar com a planilha.', 'error');
+        return false;
+    } finally {
+        setIsLoading(false);
+    }
+};
 
             useEffect(() => { loadBookingsFromAppsScript(); }, []);
 
