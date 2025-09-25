@@ -1,251 +1,106 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistema de Agendamento - Professores</title>
-    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <script src="https://cdn.tailwindcss.com"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sistema de Agendamento - Professores</title>
+  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-gray-100 font-sans">
-    <div id="root"></div>
-    <script type="text/babel">
-        const { useState, useEffect } = React;
+  <div id="root"></div>
+  <script type="text/babel">
+    const { useState } = React;
 
-        // ✅ Sua URL do Google Apps Script
-        const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwzEsOINnFdDFryoOTg6HAp-fWMgc8BoPEbrmHxb4jjrMW7g-DIci29k6jX3vtVPR_k/exec";
-        const ADMIN_PASSWORD = "admin123";
+    // 🔗 URL real do Apps Script
+    const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwzEsOINnFdDFryoOTg6HAp-fWMgc8BoPEbrmHxb4jjrMW7g-DIci29k6jX3vtVPR_k/exec";
 
-        function TeacherSchedulingSystem() {
-            // ============================
-            // CONFIGURAÇÃO DE MATÉRIAS
-            // ============================
-            const subjects = {
-                "Língua Portuguesa e Redação": {
-                    icon: "📚",
-                    color: "blue",
-                    teachers: [
-                        { id: 1, name: "Profª. Juliana Tricot", turmas: ["8º e 9º anos", "Redação: 9º anos"] },
-                        { id: 2, name: "Profª. Juliana Velho", turmas: ["Ensino Médio"] },
-                        { id: 3, name: "Profª. Daniella", turmas: ["6º e 7º anos"] },
-                        { id: 4, name: "Profª. Márcia", turmas: ["5º anos", "Inglês: 5º a 8º anos (manhã)"] }
-                    ]
-                },
-                "Matemática": {
-                    icon: "🧮",
-                    color: "green",
-                    teachers: [
-                        { id: 5, name: "Profª. Aline", turmas: ["7º anos"] },
-                        { id: 6, name: "Profª. Eliana", turmas: ["5º ano (manhã)"] },
-                        { id: 7, name: "Profª. Kátya", turmas: ["2ª e 3ª séries EM"] },
-                        { id: 8, name: "Prof. Mateus", turmas: ["5º anos (tarde)", "6º anos"] },
-                        { id: 9, name: "Profª. Michele", turmas: ["8º, 9º, 1ª série EM"] }
-                    ]
-                }
-                // 👉 (adicione o restante das matérias aqui)
-            };
+    // Função para salvar agendamento no Apps Script
+    const saveBookingToAppsScript = async (bookingData) => {
+      try {
+        const response = await fetch(APPS_SCRIPT_URL, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(bookingData),
+        });
 
-            // ============================
-            // GERAÇÃO DE HORÁRIOS
-            // ============================
-            const generateTimeSlots = () => {
-                const slots = [];
-                let startTime = new Date();
-                startTime.setHours(18, 30, 0, 0);
-                const endTime = new Date();
-                endTime.setHours(19, 50, 0, 0);
+        const result = await response.json();
 
-                while (startTime <= endTime) {
-                    const timeString = startTime.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", hour12: false });
-                    slots.push(timeString);
-                    startTime.setMinutes(startTime.getMinutes() + 10);
-                }
-                return slots;
-            };
-            const timeSlots = generateTimeSlots();
-
-            // ============================
-            // ESTADOS DO APP
-            // ============================
-            const [currentScreen, setCurrentScreen] = useState("home");
-            const [selectedSubject, setSelectedSubject] = useState("");
-            const [selectedTeacher, setSelectedTeacher] = useState(null);
-            const [teacherBookings, setTeacherBookings] = useState(new Map());
-            const [message, setMessage] = useState("");
-            const [messageType, setMessageType] = useState("");
-            const [isLoading, setIsLoading] = useState(false);
-            const [adminPassword, setAdminPassword] = useState("");
-            const [parentName, setParentName] = useState("");
-            const [studentName, setStudentName] = useState("");
-            const [email, setEmail] = useState("");
-            const [selectedSlot, setSelectedSlot] = useState("");
-            const [adminData, setAdminData] = useState([]);
-
-            // ============================
-            // UTILITÁRIOS
-            // ============================
-            const showMessage = (text, type) => {
-                setMessage(text);
-                setMessageType(type);
-                setTimeout(() => {
-                    setMessage("");
-                    setMessageType("");
-                }, 4000);
-            };
-
-            // ============================
-            // BACKEND (APPS SCRIPT)
-            // ============================
-            const loadBookingsFromAppsScript = async () => {
-                try {
-                    setIsLoading(true);
-                    const response = await fetch(APPS_SCRIPT_URL);
-                    const result = await response.json();
-
-                    if (!result.success) throw new Error(result.error);
-
-                    const rows = result.data || [];
-                    const bookingRows = rows.slice(1);
-
-                    const newBookings = new Map();
-                    const allBookings = [];
-
-                    bookingRows.forEach(row => {
-                        if (row.length >= 6) {
-                            const [professor, disciplina, responsavel, estudante, emailResp, horario, data] = row;
-
-                            let teacherId = null;
-                            Object.values(subjects).forEach(subject => {
-                                const teacher = subject.teachers.find(t => t.name === professor);
-                                if (teacher) teacherId = teacher.id;
-                            });
-
-                            if (teacherId && horario) {
-                                if (!newBookings.has(teacherId)) newBookings.set(teacherId, new Map());
-
-                                const bookingData = {
-                                    parentName: responsavel,
-                                    studentName: estudante,
-                                    email: emailResp,
-                                    time: horario,
-                                    bookingDate: data || new Date().toLocaleDateString("pt-BR"),
-                                    teacher: professor,
-                                    subject: disciplina
-                                };
-
-                                newBookings.get(teacherId).set(horario, bookingData);
-                                allBookings.push(bookingData);
-                            }
-                        }
-                    });
-
-                    setTeacherBookings(newBookings);
-                    setAdminData(allBookings);
-                } catch (err) {
-                    console.error("Erro ao carregar dados:", err);
-                    showMessage("Erro ao conectar com a planilha.", "error");
-                } finally {
-                    setIsLoading(false);
-                }
-            };
-
-            const saveBookingToAppsScript = async (bookingData) => {
-                try {
-                    setIsLoading(true);
-                    const response = await fetch(APPS_SCRIPT_URL, {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify(bookingData)
-                    });
-
-                    const result = await response.json();
-                    if (!result.success) return { error: result.error };
-
-                    return true;
-                } catch (error) {
-                    console.error("Erro ao salvar:", error);
-                    return false;
-                } finally {
-                    setIsLoading(false);
-                }
-            };
-
-            // ============================
-            // AGENDAMENTO
-            // ============================
-            const getTeacherBookings = (teacherId) => teacherBookings.get(teacherId) || new Map();
-            const getBookedSlots = (teacherId) => new Set(Array.from(getTeacherBookings(teacherId).keys()));
-            const isSlotAvailable = (slot, teacherId) => !getBookedSlots(teacherId).has(slot);
-
-            const handleBooking = async () => {
-                const teacherId = selectedTeacher?.id;
-                if (!teacherId || !parentName.trim() || !studentName.trim() || !email.trim() || !selectedSlot) {
-                    showMessage("Preencha todos os campos!", "error");
-                    return;
-                }
-
-                const bookingData = {
-                    parentName: parentName.trim(),
-                    studentName: studentName.trim(),
-                    email: email.trim().toLowerCase(),
-                    time: selectedSlot,
-                    bookingDate: new Date().toLocaleDateString("pt-BR"),
-                    teacher: selectedTeacher.name,
-                    subject: selectedSubject
-                };
-
-                const savedToSheets = await saveBookingToAppsScript(bookingData);
-
-                if (savedToSheets === true) {
-                    showMessage(`✅ Agendamento confirmado com ${selectedTeacher.name} às ${selectedSlot}`, "success");
-                    setTimeout(() => setCurrentScreen("home"), 2000);
-                } else if (savedToSheets && savedToSheets.error === "Horário já ocupado para este professor.") {
-                    showMessage("❌ Este horário acabou de ser reservado por outra pessoa. Escolha outro.", "error");
-                    loadBookingsFromAppsScript(); // Atualiza a tela
-                } else {
-                    showMessage("⚠️ Erro ao salvar. Tente novamente.", "error");
-                }
-            };
-
-            // ============================
-            // CARREGAR AGENDAMENTOS AO INICIAR
-            // ============================
-            useEffect(() => {
-                loadBookingsFromAppsScript();
-            }, []);
-
-            // ============================
-            // TELAS
-            // ============================
-            const MessageComponent = ({ message, type }) => (
-                message && (
-                    <div className={`mt-6 p-4 rounded-lg text-sm text-center ${type === "success" ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`}>
-                        {message}
-                    </div>
-                )
-            );
-
-            // (⚡️ para não ficar gigante, deixei só até booking; as telas subjects, teachers e admin são iguais às que você já tem — só substituímos o handleBooking e saveBookingToAppsScript)
-
-            return (
-                <div className="min-h-screen flex items-center justify-center p-4">
-                    {currentScreen === "home" && (
-                        <div className="text-center">
-                            <h1 className="text-2xl font-bold mb-4">🎓 Sistema de Agendamento</h1>
-                            <button onClick={() => setCurrentScreen("subjects")} className="px-6 py-3 bg-indigo-600 text-white rounded-lg">Começar</button>
-                            <button onClick={loadBookingsFromAppsScript} className="ml-4 px-6 py-3 bg-green-600 text-white rounded-lg">🔄 Atualizar</button>
-                            <MessageComponent message={message} type={messageType} />
-                        </div>
-                    )}
-                    {/* 👉 As demais telas (subjects, teachers, booking, admin, adminPanel) permanecem iguais ao código que você já tem */}
-                </div>
-            );
+        if (!result.success) {
+          throw new Error(result.error || "Erro ao salvar");
         }
 
-        const root = ReactDOM.createRoot(document.getElementById("root"));
-        root.render(<TeacherSchedulingSystem />);
-    </script>
-</body>
-</html>
+        return true;
+      } catch (error) {
+        console.error("Erro ao salvar:", error);
+        return false;
+      }
+    };
+
+    // Componente principal
+    function App() {
+      const [teacher, setTeacher] = useState("");
+      const [subject, setSubject] = useState("");
+      const [parentName, setParentName] = useState("");
+      const [studentName, setStudentName] = useState("");
+      const [email, setEmail] = useState("");
+      const [time, setTime] = useState("");
+      const [message, setMessage] = useState("");
+
+      const handleSubmit = async (e) => {
+        e.preventDefault();
+
+        const bookingData = {
+          teacher,
+          subject,
+          parentName,
+          studentName,
+          email,
+          time,
+          bookingDate: new Date().toLocaleDateString("pt-BR"),
+        };
+
+        const success = await saveBookingToAppsScript(bookingData);
+
+        if (success) {
+          setMessage("✅ Agendamento salvo com sucesso!");
+          setTeacher("");
+          setSubject("");
+          setParentName("");
+          setStudentName("");
+          setEmail("");
+          setTime("");
+        } else {
+          setMessage("❌ Falha ao salvar agendamento.");
+        }
+      };
+
+      return (
+        <div className="min-h-screen flex items-center justify-center p-6">
+          <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-lg">
+            <h1 className="text-2xl font-bold text-center mb-6">
+              Sistema de Agendamento
+            </h1>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <input
+                type="text"
+                placeholder="Professor"
+                value={teacher}
+                onChange={(e) => setTeacher(e.target.value)}
+                className="w-full p-3 border rounded-lg"
+                required
+              />
+              <input
+                type="text"
+                placeholder="Disciplina"
+                value={subject}
+                onChange={(e) => setSubject(e.target.value)}
+                className="w-full p-3 border rounded-lg"
+                required
+              />
+              <input
+                type="text"
