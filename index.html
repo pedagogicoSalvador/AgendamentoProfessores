@@ -17,63 +17,21 @@
     // ✅ Substitua pela SUA URL do Apps Script
     const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwzEsOINnFdDFryoOTg6HAp-fWMgc8BoPEbrmHxb4jjrMW7g-DIci29k6jX3vtVPR_k/exec";
 
-    // 🔹 Estrutura de matérias e professores
-    const subjects = {
-      "Língua Portuguesa e Redação": {
-        icon: "📚",
-        color: "blue",
-        teachers: [
-          { id: 1, name: "Profª. Juliana Tricot" },
-          { id: 2, name: "Profª. Juliana Velho" },
-          { id: 3, name: "Profª. Daniella" },
-          { id: 4, name: "Profª. Márcia" }
-        ]
-      },
-      "Matemática": {
-        icon: "🧮",
-        color: "green",
-        teachers: [
-          { id: 5, name: "Profª. Aline" },
-          { id: 6, name: "Profª Eliana" },
-          { id: 7, name: "Profª Kátya" },
-          { id: 8, name: "Prof. Mateus" },
-          { id: 9, name: "Profª Michele" }
-        ]
-      }
-      // ➕ Você pode continuar listando as demais matérias e professores aqui
-    };
-
-    // 🔹 Horários fixos (18h30 até 19h50, a cada 10 minutos)
-    function gerarHorarios() {
-      const slots = [];
-      let h = 18, m = 30;
-      while (h < 19 || (h === 19 && m <= 50)) {
-        const hh = String(h).padStart(2, "0");
-        const mm = String(m).padStart(2, "0");
-        slots.push(`${hh}:${mm}`);
-        m += 10;
-        if (m >= 60) { h++; m = 0; }
-      }
-      return slots;
-    }
-    const HORARIOS = gerarHorarios();
-
     function App() {
-      const [screen, setScreen] = useState("home"); // home → subjects → teachers → booking
       const [agendamentos, setAgendamentos] = useState([]);
-      const [selectedSubject, setSelectedSubject] = useState(null);
-      const [selectedTeacher, setSelectedTeacher] = useState(null);
+      const [loading, setLoading] = useState(false);
+      const [error, setError] = useState("");
       const [form, setForm] = useState({
+        teacher: "",
+        subject: "",
         parentName: "",
         studentName: "",
         email: "",
         time: "",
         bookingDate: new Date().toLocaleDateString("pt-BR")
       });
-      const [loading, setLoading] = useState(false);
-      const [error, setError] = useState("");
 
-      // 🔹 Carregar agendamentos existentes
+      // 🔹 Carregar agendamentos do Google Sheets
       async function loadAgendamentos() {
         try {
           setLoading(true);
@@ -92,25 +50,19 @@
         }
       }
 
-      // 🔹 Salvar novo agendamento
+      // 🔹 Enviar novo agendamento
       async function salvarAgendamento(e) {
         e.preventDefault();
         try {
           setLoading(true);
-          const booking = {
-            teacher: selectedTeacher.name,
-            subject: selectedSubject,
-            ...form
-          };
           const response = await fetch(APPS_SCRIPT_URL, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(booking)
+            body: JSON.stringify(form)
           });
           const data = await response.json();
           if (data.success) {
             alert("✅ Agendamento salvo com sucesso!");
-            setScreen("home");
             loadAgendamentos();
           } else {
             alert("⚠️ Erro: " + data.error);
@@ -127,130 +79,100 @@
         loadAgendamentos();
       }, []);
 
-      // 🔹 Verifica horários já ocupados para o professor selecionado
-      function horariosOcupados() {
-        if (!selectedTeacher) return [];
-        return agendamentos
-          .slice(1) // ignora cabeçalho
-          .filter(row => row[0] === selectedTeacher.name)
-          .map(row => row[5]);
-      }
-      const ocupados = horariosOcupados();
+      return (
+        <div className="max-w-4xl mx-auto p-6">
+          <h1 className="text-3xl font-bold mb-6 text-center">📅 Sistema de Agendamento</h1>
 
-      // 🔹 Renderização de telas
-      if (screen === "home") {
-        return (
-          <div className="max-w-4xl mx-auto p-6 text-center">
-            <h1 className="text-3xl font-bold mb-6">📅 Sistema de Agendamento</h1>
+          {/* Formulário */}
+          <form onSubmit={salvarAgendamento} className="bg-white p-6 rounded-lg shadow mb-8">
+            <h2 className="text-xl font-semibold mb-4">Novo Agendamento</h2>
+            <input
+              className="w-full p-2 border rounded mb-3"
+              placeholder="Professor"
+              value={form.teacher}
+              onChange={e => setForm({ ...form, teacher: e.target.value })}
+              required
+            />
+            <input
+              className="w-full p-2 border rounded mb-3"
+              placeholder="Disciplina"
+              value={form.subject}
+              onChange={e => setForm({ ...form, subject: e.target.value })}
+              required
+            />
+            <input
+              className="w-full p-2 border rounded mb-3"
+              placeholder="Nome do Responsável"
+              value={form.parentName}
+              onChange={e => setForm({ ...form, parentName: e.target.value })}
+              required
+            />
+            <input
+              className="w-full p-2 border rounded mb-3"
+              placeholder="Nome do Estudante"
+              value={form.studentName}
+              onChange={e => setForm({ ...form, studentName: e.target.value })}
+              required
+            />
+            <input
+              className="w-full p-2 border rounded mb-3"
+              type="email"
+              placeholder="Email"
+              value={form.email}
+              onChange={e => setForm({ ...form, email: e.target.value })}
+              required
+            />
+            <input
+              className="w-full p-2 border rounded mb-3"
+              placeholder="Horário (ex: 18:30)"
+              value={form.time}
+              onChange={e => setForm({ ...form, time: e.target.value })}
+              required
+            />
             <button
-              onClick={() => setScreen("subjects")}
-              className="px-6 py-3 bg-indigo-600 text-white rounded-lg"
+              type="submit"
+              className="w-full bg-indigo-600 text-white py-2 rounded hover:bg-indigo-700"
+              disabled={loading}
             >
-              Começar Agendamento
+              {loading ? "Salvando..." : "Salvar Agendamento"}
             </button>
+          </form>
+
+          {/* Lista de agendamentos */}
+          <div className="bg-white p-6 rounded-lg shadow">
+            <h2 className="text-xl font-semibold mb-4">📋 Agendamentos Registrados</h2>
+            {error && <p className="text-red-600 mb-3">{error}</p>}
+            {loading && <p className="text-gray-600">Carregando...</p>}
+            {!loading && agendamentos.length > 1 && (
+              <table className="min-w-full text-sm border">
+                <thead className="bg-gray-200">
+                  <tr>
+                    <th className="p-2 border">Professor</th>
+                    <th className="p-2 border">Disciplina</th>
+                    <th className="p-2 border">Responsável</th>
+                    <th className="p-2 border">Estudante</th>
+                    <th className="p-2 border">Email</th>
+                    <th className="p-2 border">Horário</th>
+                    <th className="p-2 border">Data</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {agendamentos.slice(1).map((row, idx) => (
+                    <tr key={idx} className="odd:bg-gray-50">
+                      {row.map((col, i) => (
+                        <td key={i} className="p-2 border">{col}</td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+            {!loading && agendamentos.length <= 1 && (
+              <p className="text-gray-500">Nenhum agendamento registrado ainda.</p>
+            )}
           </div>
-        );
-      }
-
-      if (screen === "subjects") {
-        return (
-          <div className="max-w-5xl mx-auto p-6">
-            <h2 className="text-2xl font-bold mb-6 text-center">Selecione a Matéria</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-              {Object.entries(subjects).map(([subject, data]) => (
-                <button
-                  key={subject}
-                  onClick={() => { setSelectedSubject(subject); setScreen("teachers"); }}
-                  className="bg-white rounded-xl shadow p-6 hover:shadow-lg"
-                >
-                  <div className="text-4xl mb-2">{data.icon}</div>
-                  <div className="font-semibold">{subject}</div>
-                  <div className="text-sm text-gray-500">{data.teachers.length} professores</div>
-                </button>
-              ))}
-            </div>
-          </div>
-        );
-      }
-
-      if (screen === "teachers") {
-        const teachers = subjects[selectedSubject]?.teachers || [];
-        return (
-          <div className="max-w-4xl mx-auto p-6">
-            <h2 className="text-2xl font-bold mb-6 text-center">{selectedSubject}</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-              {teachers.map(t => (
-                <div key={t.id} className="bg-white rounded-xl shadow p-6">
-                  <h3 className="text-lg font-semibold mb-2">{t.name}</h3>
-                  <button
-                    onClick={() => { setSelectedTeacher(t); setScreen("booking"); }}
-                    className="w-full py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700"
-                  >
-                    Agendar
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-        );
-      }
-
-      if (screen === "booking") {
-        return (
-          <div className="max-w-2xl mx-auto p-6">
-            <h2 className="text-2xl font-bold mb-6 text-center">Agendar com {selectedTeacher.name}</h2>
-            <form onSubmit={salvarAgendamento} className="bg-white p-6 rounded-lg shadow">
-              <input
-                className="w-full p-2 border rounded mb-3"
-                placeholder="Nome do Responsável"
-                value={form.parentName}
-                onChange={e => setForm({ ...form, parentName: e.target.value })}
-                required
-              />
-              <input
-                className="w-full p-2 border rounded mb-3"
-                placeholder="Nome do Estudante"
-                value={form.studentName}
-                onChange={e => setForm({ ...form, studentName: e.target.value })}
-                required
-              />
-              <input
-                className="w-full p-2 border rounded mb-3"
-                type="email"
-                placeholder="Email"
-                value={form.email}
-                onChange={e => setForm({ ...form, email: e.target.value })}
-                required
-              />
-
-              <label className="block font-medium mb-2">Horário</label>
-              <select
-                className="w-full p-2 border rounded mb-4"
-                value={form.time}
-                onChange={e => setForm({ ...form, time: e.target.value })}
-                required
-              >
-                <option value="">-- selecione --</option>
-                {HORARIOS.map(h => (
-                  <option key={h} value={h} disabled={ocupados.includes(h)}>
-                    {h} {ocupados.includes(h) ? " (indisponível)" : ""}
-                  </option>
-                ))}
-              </select>
-
-              <button
-                type="submit"
-                className="w-full bg-green-600 text-white py-2 rounded hover:bg-green-700"
-                disabled={loading}
-              >
-                {loading ? "Salvando..." : "Confirmar Agendamento"}
-              </button>
-            </form>
-          </div>
-        );
-      }
-
-      return <p className="text-center">Erro: tela desconhecida</p>;
+        </div>
+      );
     }
 
     const root = ReactDOM.createRoot(document.getElementById("root"));
