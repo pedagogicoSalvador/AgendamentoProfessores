@@ -202,7 +202,33 @@
           };
 
           const getTeacherBookings = (teacherId) => teacherBookings.get(teacherId) || new Map();
-          const getBookedSlots = (teacherId) => new Set(Array.from(getTeacherBookings(teacherId).keys()));
+          
+          const getBookedSlots = (teacherId) => {
+            const bookings = getTeacherBookings(teacherId);
+            const slots = new Set();
+            
+            // Normaliza os horários ao criar o Set
+            bookings.forEach((booking, timeKey) => {
+              // Se timeKey está em formato ISO, converte
+              if (timeKey.includes('T') && timeKey.includes('Z')) {
+                try {
+                  const date = new Date(timeKey);
+                  const hours = date.getUTCHours().toString().padStart(2, '0');
+                  const minutes = date.getUTCMinutes().toString().padStart(2, '0');
+                  const normalized = `${hours}:${minutes}`;
+                  slots.add(normalized);
+                  console.log(`🔄 Convertendo: ${timeKey} → ${normalized}`);
+                } catch (e) {
+                  slots.add(timeKey);
+                }
+              } else {
+                slots.add(timeKey);
+              }
+            });
+            
+            return slots;
+          };
+          
           const isSlotAvailable = (slot, teacherId) => !getBookedSlots(teacherId).has(slot);
 
           const goToAdmin = () => setCurrentScreen("admin");
