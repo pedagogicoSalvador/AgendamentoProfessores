@@ -115,6 +115,7 @@
           const [lastSync, setLastSync] = useState(null);
           const [debugData, setDebugData] = useState(null);
           const [showDebug, setShowDebug] = useState(false);
+          const [debugBookings, setDebugBookings] = useState([]);
 
           const loadBookingsFromAppsScript = async () => {
             try {
