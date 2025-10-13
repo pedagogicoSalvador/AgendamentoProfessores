@@ -213,8 +213,9 @@
               if (timeKey.includes('T') && timeKey.includes('Z')) {
                 try {
                   const date = new Date(timeKey);
-                  const hours = date.getUTCHours().toString().padStart(2, '0');
-                  const minutes = date.getUTCMinutes().toString().padStart(2, '0');
+                  // Converte para horário local do Brasil (UTC-3)
+                  const hours = date.getHours().toString().padStart(2, '0');
+                  const minutes = date.getMinutes().toString().padStart(2, '0');
                   const normalized = `${hours}:${minutes}`;
                   slots.add(normalized);
                   console.log(`🔄 Convertendo: ${timeKey} → ${normalized}`);
