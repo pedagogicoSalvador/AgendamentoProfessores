@@ -15,7 +15,7 @@
         const { useState, useEffect } = React;
 
         // CONFIGURAÇÃO - SUBSTITUA PELA URL DO SEU GOOGLE APPS SCRIPT
-        const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxUXso9v8Hq-MONLJejRsAvZx2iuXY6hYuiIKE4q80wL7j1cjLzZzTz0idiFcXu0BkH/exec';
+        const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwBT3t4rEssF3V53ocaL-7-bEvleAhX5W_EjrvTLqDdk4yhFX1HUeOhRya__Y8SAONbNA/exec';
 
         function TeacherSchedulingSystem() {
           const subjects = {
@@ -115,6 +115,7 @@
           const [lastSync, setLastSync] = useState(null);
           const [debugData, setDebugData] = useState(null);
           const [showDebug, setShowDebug] = useState(false);
+          const [debugBookings, setDebugBookings] = useState([]);
 
           const loadBookingsFromAppsScript = async () => {
             try {
@@ -324,8 +325,18 @@
                     }, "🐛 Debug")
                   ),
                   showDebug && debugData && React.createElement('div', { className: "mt-6 bg-gray-900 text-green-400 p-4 rounded-lg text-xs overflow-auto max-h-96" },
-                    React.createElement('h3', { className: "font-bold mb-2" }, "🐛 DADOS BRUTOS DO GOOGLE SHEETS:"),
-                    React.createElement('pre', {}, JSON.stringify(debugData, null, 2))
+                    React.createElement('h3', { className: "font-bold mb-2 text-yellow-400" }, "🐛 DADOS BRUTOS DO GOOGLE SHEETS:"),
+                    React.createElement('pre', {}, JSON.stringify(debugData, null, 2)),
+                    React.createElement('h3', { className: "font-bold mb-2 mt-4 text-yellow-400" }, "📊 AGENDAMENTOS PROCESSADOS:"),
+                    debugBookings.length > 0 
+                      ? React.createElement('div', {},
+                          debugBookings.map((b, i) => 
+                            React.createElement('div', { key: i, className: "mb-2 p-2 bg-gray-800 rounded" },
+                              `ID: ${b.teacherId} | Prof: ${b.teacher} | Horário: ${b.time} | Aluno: ${b.student}`
+                            )
+                          )
+                        )
+                      : React.createElement('p', { className: "text-red-400" }, "❌ NENHUM AGENDAMENTO PROCESSADO!")
                   ),
                   React.createElement('div', { className: "grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4" },
                     Object.entries(subjects).map(([subject, data]) => 
@@ -409,6 +420,13 @@
             const bookedSlots = getBookedSlots(selectedTeacher.id);
             const existingBooking = email ? Array.from(teacherBookingsData.values()).find(b => b.email.toLowerCase() === email.toLowerCase()) : null;
             
+            console.log('🔍 DEBUG TELA DE AGENDAMENTO:');
+            console.log('Professor selecionado:', selectedTeacher);
+            console.log('Teacher ID:', selectedTeacher.id);
+            console.log('Agendamentos deste professor:', teacherBookingsData);
+            console.log('Horários ocupados (Set):', Array.from(bookedSlots));
+            console.log('Total de horários ocupados:', bookedSlots.size);
+            
             return React.createElement('div', { className: "min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-6" },
               React.createElement('div', { className: "max-w-4xl mx-auto" },
                 React.createElement('div', { className: "bg-white rounded-2xl shadow-xl p-8" },
@@ -486,9 +504,15 @@
                   ),
                   message && React.createElement('div', {
                     className: `mb-6 p-4 rounded-lg ${messageType === 'success' ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800'}`
-                  }, message),
+                  }, message                  ),
                   React.createElement('div', {},
                     React.createElement('h3', { className: "text-xl font-semibold mb-4" }, "Horários Disponíveis"),
+                    React.createElement('div', { className: "mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded text-sm" },
+                      React.createElement('strong', {}, `🐛 DEBUG: `),
+                      `Professor ID: ${selectedTeacher.id} | `,
+                      `Agendamentos: ${teacherBookingsData.size} | `,
+                      `Ocupados: ${Array.from(bookedSlots).join(', ') || 'nenhum'}`
+                    ),
                     React.createElement('div', { className: "grid grid-cols-3 md:grid-cols-6 gap-3" },
                       timeSlots.map((slot) => {
                         const available = isSlotAvailable(slot, selectedTeacher.id);
