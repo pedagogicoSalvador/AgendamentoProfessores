@@ -113,6 +113,8 @@
           const [email, setEmail] = useState("");
           const [selectedSlot, setSelectedSlot] = useState("");
           const [lastSync, setLastSync] = useState(null);
+          const [debugData, setDebugData] = useState(null);
+          const [showDebug, setShowDebug] = useState(false);
 
           const loadBookingsFromAppsScript = async () => {
             try {
@@ -315,7 +317,15 @@
                     React.createElement('button', {
                       onClick: loadBookingsFromAppsScript,
                       className: "px-6 py-4 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-lg font-medium"
-                    }, "🔄 Atualizar Dados")
+                    }, "🔄 Atualizar Dados"),
+                    React.createElement('button', {
+                      onClick: () => setShowDebug(!showDebug),
+                      className: "px-6 py-4 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-lg font-medium"
+                    }, "🐛 Debug")
+                  ),
+                  showDebug && debugData && React.createElement('div', { className: "mt-6 bg-gray-900 text-green-400 p-4 rounded-lg text-xs overflow-auto max-h-96" },
+                    React.createElement('h3', { className: "font-bold mb-2" }, "🐛 DADOS BRUTOS DO GOOGLE SHEETS:"),
+                    React.createElement('pre', {}, JSON.stringify(debugData, null, 2))
                   ),
                   React.createElement('div', { className: "grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4" },
                     Object.entries(subjects).map(([subject, data]) => 
