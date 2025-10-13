@@ -112,11 +112,12 @@
           const [studentName, setStudentName] = useState("");
           const [email, setEmail] = useState("");
           const [selectedSlot, setSelectedSlot] = useState("");
+          const [lastSync, setLastSync] = useState(null);
 
           const loadBookingsFromAppsScript = async () => {
             try {
               setIsLoading(true);
-              const response = await fetch(APPS_SCRIPT_URL);
+              const response = await fetch(APPS_SCRIPT_URL + '?t=' + Date.now()); // Evita cache
               const result = await response.json();
               
               if (!result.success) throw new Error(result.error);
@@ -150,10 +151,11 @@
               });
               
               setTeacherBookings(newBookings);
-              showMessage('Agendamentos carregados!', 'success');
+              setLastSync(new Date());
+              showMessage('✅ Dados sincronizados!', 'success');
             } catch (error) {
               console.error('Erro:', error);
-              showMessage('Erro ao carregar. Usando dados locais.', 'error');
+              showMessage('⚠️ Erro ao carregar dados', 'error');
             } finally {
               setIsLoading(false);
             }
@@ -176,11 +178,19 @@
             }
           };
 
+          // CARREGA dados quando app inicia
           useEffect(() => {
             if (APPS_SCRIPT_URL !== 'https://script.google.com/macros/s/SEU_SCRIPT_ID_AQUI/exec') {
               loadBookingsFromAppsScript();
             }
           }, []);
+
+          // RECARREGA dados quando vai para tela de agendamento
+          useEffect(() => {
+            if (currentScreen === "booking" && selectedTeacher) {
+              loadBookingsFromAppsScript();
+            }
+          }, [currentScreen, selectedTeacher]);
 
           const showMessage = (text, type) => {
             setMessage(text);
@@ -232,13 +242,16 @@
             if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return showMessage("Email inválido.", "error");
             if (!selectedSlot) return showMessage("Selecione um horário.", "error");
 
+            // Recarrega antes de agendar para garantir dados atuais
+            await loadBookingsFromAppsScript();
+
             const currentBookings = getTeacherBookings(teacherId);
             if (Array.from(currentBookings.values()).find(b => b.email.toLowerCase() === email.toLowerCase())) {
               return showMessage("Este email já tem um agendamento.", "error");
             }
 
             if (!isSlotAvailable(selectedSlot, teacherId)) {
-              return showMessage("Horário não disponível.", "error");
+              return showMessage("Este horário foi reservado. Escolha outro.", "error");
             }
 
             const bookingData = {
@@ -251,23 +264,27 @@
               subject: selectedSubject
             };
 
-            const updatedBookings = new Map([...currentBookings, [selectedSlot, bookingData]]);
-            setTeacherBookings(prev => new Map([...prev, [teacherId, updatedBookings]]));
-            
             const saved = await saveBookingToAppsScript(bookingData);
-            showMessage(saved ? 'Agendamento salvo na planilha!' : 'Agendamento salvo localmente.', 'success');
             
-            setParentName("");
-            setStudentName("");
-            setEmail("");
-            setSelectedSlot("");
+            if (saved) {
+              // Recarrega após salvar para confirmar
+              await loadBookingsFromAppsScript();
+              showMessage('✅ Agendamento confirmado e salvo!', 'success');
+              setParentName("");
+              setStudentName("");
+              setEmail("");
+              setSelectedSlot("");
+            } else {
+              showMessage('❌ Erro ao salvar. Tente novamente.', 'error');
+            }
           };
 
           if (isLoading) {
             return React.createElement('div', { className: "min-h-screen bg-gradient-to-br from-indigo-50 to-blue-100 flex items-center justify-center" },
               React.createElement('div', { className: "bg-white rounded-2xl shadow-xl p-8 text-center" },
-                React.createElement('div', { className: "text-4xl mb-4" }, "⏳"),
-                React.createElement('h2', { className: "text-xl font-semibold text-gray-800" }, "Sincronizando...")
+                React.createElement('div', { className: "text-4xl mb-4 animate-pulse" }, "🔄"),
+                React.createElement('h2', { className: "text-xl font-semibold text-gray-800" }, "Sincronizando com Google Sheets..."),
+                React.createElement('p', { className: "text-sm text-gray-600 mt-2" }, "Aguarde")
               )
             );
           }
@@ -281,9 +298,12 @@
                     React.createElement('h1', { className: "text-4xl font-bold text-gray-800 mb-4" }, "Sistema de Agendamento"),
                     React.createElement('p', { className: "text-xl text-gray-600 mb-2" }, "Reuniões Pedagógicas com Professores"),
                     React.createElement('p', { className: "text-gray-500 mb-2" }, "Horários: 18:30 às 19:50 (10min cada)"),
-                    React.createElement('p', { className: "text-sm text-green-600" }, "🔗 Conectado ao Google Sheets")
+                    React.createElement('p', { className: "text-sm text-green-600" }, "🔗 Conectado ao Google Sheets"),
+                    lastSync && React.createElement('p', { className: "text-xs text-gray-400 mt-1" }, 
+                      `Última sincronização: ${lastSync.toLocaleTimeString('pt-BR')}`
+                    )
                   ),
-                  React.createElement('div', { className: "flex gap-4 justify-center mb-8" },
+                  React.createElement('div', { className: "flex gap-4 justify-center mb-8 flex-wrap" },
                     React.createElement('button', {
                       onClick: goToSubjects,
                       className: "px-8 py-4 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-lg font-medium"
@@ -295,7 +315,7 @@
                     React.createElement('button', {
                       onClick: loadBookingsFromAppsScript,
                       className: "px-6 py-4 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-lg font-medium"
-                    }, "🔄 Atualizar")
+                    }, "🔄 Atualizar Dados")
                   ),
                   React.createElement('div', { className: "grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4" },
                     Object.entries(subjects).map(([subject, data]) => 
@@ -386,7 +406,10 @@
                     React.createElement('button', { onClick: goBack, className: "mr-4 p-2 text-gray-600 hover:text-gray-800" }, "← Voltar"),
                     React.createElement('div', { className: "flex-1" },
                       React.createElement('h1', { className: "text-3xl font-bold text-gray-800 mb-2" }, selectedTeacher.name),
-                      React.createElement('p', { className: "text-gray-600" }, `📚 ${selectedSubject}`)
+                      React.createElement('p', { className: "text-gray-600" }, `📚 ${selectedSubject}`),
+                      lastSync && React.createElement('p', { className: "text-xs text-gray-400 mt-1" }, 
+                        `Atualizado: ${lastSync.toLocaleTimeString('pt-BR')}`
+                      )
                     )
                   ),
                   React.createElement('div', { className: "grid grid-cols-3 gap-4 mb-8" },
@@ -443,12 +466,12 @@
                       )
                     ),
                     existingBooking && React.createElement('p', { className: "text-sm text-amber-600 mb-4" }, 
-                      `Email já tem agendamento às ${existingBooking.time}`
+                      `⚠️ Email já tem agendamento às ${existingBooking.time}`
                     ),
                     React.createElement('button', {
                       onClick: handleBooking,
                       disabled: !parentName.trim() || !studentName.trim() || !email.trim() || !selectedSlot || existingBooking,
-                      className: "px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 font-medium"
+                      className: "px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 font-medium w-full"
                     }, "Confirmar Agendamento")
                   ),
                   message && React.createElement('div', {
