@@ -188,14 +188,6 @@
 
           useEffect(() => {
             loadBookingsFromAppsScript();
-            
-            // Atualiza automaticamente a cada 30 segundos
-            const intervalId = setInterval(() => {
-              loadBookingsFromAppsScript();
-            }, 30000); // 30000ms = 30 segundos
-            
-            // Limpa o intervalo quando o componente for desmontado
-            return () => clearInterval(intervalId);
           }, []);
 
           useEffect(() => {
@@ -299,8 +291,8 @@
                     React.createElement('div', { className: "text-6xl mb-4" }, "🎓"),
                     React.createElement('h1', { className: "text-4xl font-bold text-gray-800 mb-4" }, "Sistema de Agendamento"),
                     React.createElement('p', { className: "text-xl text-gray-600 mb-2" }, "Reuniões Pedagógicas com Professores"),
-                    React.createElement('p', { className: "text-gray-500 mb-2" }, "9 horários disponíveis (A a I) - 18:30 às 19:50"),
-                    React.createElement('p', { className: "text-sm text-green-600" }, "🔄 Sincronização automática ativa"),
+                    React.createElement('p', { className: "text-gray-500 mb-2" }, "9 Slots disponíveis (A a I) - 18:30 às 19:50"),
+                    React.createElement('p', { className: "text-sm text-green-600" }, "🔗 Conectado ao Google Sheets"),
                     lastSync && React.createElement('p', { className: "text-xs text-gray-400 mt-1" }, 
                       `Última sincronização: ${lastSync.toLocaleTimeString('pt-BR')}`
                     )
@@ -309,7 +301,11 @@
                     React.createElement('button', {
                       onClick: goToSubjects,
                       className: "px-8 py-4 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-lg font-medium"
-                    }, "Começar Agendamento")
+                    }, "Começar Agendamento"),
+                    React.createElement('button', {
+                      onClick: loadBookingsFromAppsScript,
+                      className: "px-6 py-4 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-lg font-medium"
+                    }, "🔄 Atualizar")
                   ),
                   React.createElement('div', { className: "grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4" },
                     Object.entries(subjects).map(([subject, data]) => 
@@ -379,7 +375,7 @@
                             React.createElement('span', { key: i, className: "px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full" }, turma)
                           )
                         ),
-                        React.createElement('p', { className: "text-xs text-gray-500" }, `${TIME_SLOTS.length - bookingCount} horários disponíveis`)
+                        React.createElement('p', { className: "text-xs text-gray-500" }, `${TIME_SLOTS.length - bookingCount} slots disponíveis`)
                       );
                     })
                   )
@@ -446,7 +442,7 @@
                         onChange: (e) => setSelectedSlot(e.target.value),
                         className: "px-4 py-2 border border-gray-300 rounded-lg"
                       },
-                        React.createElement('option', { value: "" }, "Selecione um horário"),
+                        React.createElement('option', { value: "" }, "Selecione um slot"),
                         TIME_SLOTS.map((slot) => {
                           const available = isSlotAvailable(slot.id, selectedTeacher.id);
                           return React.createElement('option', {
@@ -458,7 +454,7 @@
                       )
                     ),
                     existingBooking && React.createElement('p', { className: "text-sm text-amber-600 mb-4" }, 
-                      `⚠️ Email já tem agendamento no horário ${existingBooking.slot}`
+                      `⚠️ Email já tem agendamento no Slot ${existingBooking.slot}`
                     ),
                     React.createElement('button', {
                       onClick: handleBooking,
@@ -470,7 +466,7 @@
                     className: `mb-6 p-4 rounded-lg ${messageType === 'success' ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800'}`
                   }, message),
                   React.createElement('div', {},
-                    React.createElement('h3', { className: "text-xl font-semibold mb-4" }, "Horários Disponíveis"),
+                    React.createElement('h3', { className: "text-xl font-semibold mb-4" }, "Slots Disponíveis"),
                     React.createElement('div', { className: "grid grid-cols-3 md:grid-cols-3 gap-3" },
                       TIME_SLOTS.map((slot) => {
                         const available = isSlotAvailable(slot.id, selectedTeacher.id);
